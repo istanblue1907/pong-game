@@ -86,9 +86,10 @@ h1 {
     box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
     touch-action: none;
     width: 90vw;
-    height: auto;
+    height: 45vw;
     max-width: 800px;
-    aspect-ratio: 2 / 1;
+    max-height: 400px;
+    image-rendering: pixelated;
 }
 
 .controls {
@@ -152,6 +153,7 @@ h1 {
         padding: 10px;
         gap: 10px;
         border-radius: 5px;
+        max-height: 100vh;
     }
 
     h1 {
@@ -159,10 +161,11 @@ h1 {
     }
 
     #pongCanvas {
-        width: calc(100vw - 20px);
-        height: calc((100vw - 20px) / 2);
-        max-width: none;
-        aspect-ratio: auto;
+        width: 100vw;
+        height: 50vw;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
     }
 }
 
@@ -196,7 +199,7 @@ h1 {
     }
 
     #pongCanvas {
-        width: calc(100vw - 10px);
+        width: 100vw;
         height: auto;
         max-height: calc(100vh - 100px);
     }
