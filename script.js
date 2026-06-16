@@ -33,8 +33,8 @@ const game = {
 };
 
 // Paddle properties
-const paddleHeight = game.height * 0.2;
-const paddleWidth = game.width * 0.015;
+const paddleHeight = Math.max(game.height * 0.2, 50);
+const paddleWidth = Math.max(game.width * 0.015, 10);
 
 const player = {
     x: game.width * 0.01,
@@ -61,7 +61,7 @@ const computer = {
 const ball = {
     x: game.width / 2,
     y: game.height / 2,
-    radius: game.width * 0.008,
+    radius: Math.max(game.width * 0.008, 5),
     dx: game.width * 0.0062,
     dy: game.width * 0.0062,
     speed: game.width * 0.0062
@@ -94,13 +94,15 @@ canvas.addEventListener('mousemove', (e) => {
     player.touchY = e.clientY - rect.top;
 });
 
-// Touch support for mobile
+// Touch support for mobile - FIXED
 canvas.addEventListener('touchstart', (e) => {
+    console.log('Touch start detected'); // Debug
     e.preventDefault();
     if (!game.isRunning) {
+        console.log('Starting game...'); // Debug
         toggleGameState();
     }
-});
+}, false);
 
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
@@ -108,20 +110,32 @@ canvas.addEventListener('touchmove', (e) => {
         const rect = canvas.getBoundingClientRect();
         player.touchY = e.touches[0].clientY - rect.top;
     }
-});
+}, false);
 
 canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
+}, false);
+
+// Click support for desktop/mobile browsers
+canvas.addEventListener('click', (e) => {
+    console.log('Click detected'); // Debug
+    if (!game.isRunning) {
+        console.log('Starting game from click...'); // Debug
+        toggleGameState();
+    }
 });
 
 // Game state toggle
 function toggleGameState() {
+    console.log('Toggle called, isRunning:', game.isRunning); // Debug
     if (!game.isRunning) {
         game.isRunning = true;
         game.isPaused = false;
+        console.log('Game started!'); // Debug
         gameLoop();
     } else {
         game.isPaused = !game.isPaused;
+        console.log('Game paused:', game.isPaused); // Debug
     }
 }
 
