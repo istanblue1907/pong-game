@@ -2,8 +2,23 @@
 const canvas = document.getElementById('pongCanvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = 800;
-canvas.height = 400;
+// Responsive canvas sizing
+function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    game.width = canvas.width;
+    game.height = canvas.height;
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => {
+    setTimeout(resizeCanvas, 100);
+});
+
+// Detect device type
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 // Game objects
 const game = {
@@ -18,37 +33,38 @@ const game = {
 };
 
 // Paddle properties
-const paddleHeight = 80;
-const paddleWidth = 10;
+const paddleHeight = game.height * 0.2;
+const paddleWidth = game.width * 0.015;
 
 const player = {
-    x: 10,
+    x: game.width * 0.01,
     y: game.height / 2 - paddleHeight / 2,
     width: paddleWidth,
     height: paddleHeight,
     dy: 0,
-    speed: 6,
-    mouseY: 0,
+    speed: game.height * 0.015,
+    touchY: 0,
+    lastTouchY: 0,
     useMouseControl: true
 };
 
 const computer = {
-    x: game.width - paddleWidth - 10,
+    x: game.width - paddleWidth - game.width * 0.01,
     y: game.height / 2 - paddleHeight / 2,
     width: paddleWidth,
     height: paddleHeight,
     dy: 0,
-    speed: 5
+    speed: game.height * 0.012
 };
 
 // Ball properties
 const ball = {
     x: game.width / 2,
     y: game.height / 2,
-    radius: 6,
-    dx: 5,
-    dy: 5,
-    speed: 5
+    radius: game.width * 0.008,
+    dx: game.width * 0.0062,
+    dy: game.width * 0.0062,
+    speed: game.width * 0.0062
 };
 
 // Input handling
@@ -63,7 +79,6 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown') keys.ArrowDown = true;
     if (e.key === ' ') {
         e.preventDefault();
-        keys.Space = true;
         toggleGameState();
     }
 });
@@ -76,7 +91,27 @@ document.addEventListener('keyup', (e) => {
 // Mouse tracking for player paddle
 canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    player.mouseY = e.clientY - rect.top;
+    player.touchY = e.clientY - rect.top;
+});
+
+// Touch support for mobile
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!game.isRunning) {
+        toggleGameState();
+    }
+});
+
+canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        player.touchY = e.touches[0].clientY - rect.top;
+    }
+});
+
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
 });
 
 // Game state toggle
@@ -100,9 +135,9 @@ function updatePlayerPaddle() {
         player.dy = 0;
     }
 
-    // Allow mouse control
-    if (player.useMouseControl && player.mouseY !== 0) {
-        const targetY = player.mouseY - player.height / 2;
+    // Allow touch/mouse control
+    if (player.touchY !== 0) {
+        const targetY = player.touchY - player.height / 2;
         const diff = targetY - player.y;
         
         if (Math.abs(diff) > 5) {
@@ -128,14 +163,14 @@ function updateComputerPaddle() {
     const diff = ballCenter - computerCenter;
 
     // AI difficulty adjustment
-    if (Math.abs(diff) > 35) {
+    if (Math.abs(diff) > game.height * 0.1) {
         if (diff > 0) {
             computer.y += computer.speed;
         } else {
             computer.y -= computer.speed;
         }
     } else {
-        computer.y += computer.speed * (diff / 50);
+        computer.y += computer.speed * (diff / (game.height * 0.15));
     }
 
     // Collision with walls
@@ -155,7 +190,6 @@ function updateBall() {
     // Collision with top and bottom walls
     if (ball.y - ball.radius < 0 || ball.y + ball.radius > game.height) {
         ball.dy = -ball.dy;
-        // Clamp ball position
         ball.y = Math.max(ball.radius, Math.min(game.height - ball.radius, ball.y));
     }
 
@@ -167,8 +201,6 @@ function updateBall() {
     ) {
         ball.dx = -ball.dx;
         ball.x = player.x + player.width + ball.radius;
-
-        // Add spin based on paddle movement
         const hitPos = (ball.y - (player.y + player.height / 2)) / (player.height / 2);
         ball.dy = hitPos * ball.speed;
     }
@@ -181,8 +213,6 @@ function updateBall() {
     ) {
         ball.dx = -ball.dx;
         ball.x = computer.x - ball.radius;
-
-        // Add spin based on paddle movement
         const hitPos = (ball.y - (computer.y + computer.height / 2)) / (computer.height / 2);
         ball.dy = hitPos * ball.speed;
     }
@@ -202,8 +232,8 @@ function updateBall() {
 function resetBall() {
     ball.x = game.width / 2;
     ball.y = game.height / 2;
-    ball.dx = (Math.random() > 0.5 ? 1 : -1) * 5;
-    ball.dy = (Math.random() * 2 - 1) * 5;
+    ball.dx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+    ball.dy = (Math.random() * 2 - 1) * ball.speed;
 }
 
 // Draw functions
@@ -240,24 +270,18 @@ function drawCenter() {
 }
 
 function draw() {
-    // Clear canvas
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, game.width, game.height);
-
-    // Draw center line
     drawCenter();
-
-    // Draw paddles and ball
     drawPaddle(player);
     drawPaddle(computer);
     drawBall();
 
-    // Draw paused message
     if (game.isPaused) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, game.width, game.height);
         ctx.fillStyle = '#667eea';
-        ctx.font = 'bold 40px Arial';
+        ctx.font = 'bold ' + (game.width * 0.1) + 'px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('PAUSED', game.width / 2, game.height / 2);
     }
@@ -292,12 +316,13 @@ function drawStartScreen() {
     drawCenter();
 
     ctx.fillStyle = '#667eea';
-    ctx.font = 'bold 40px Arial';
+    ctx.font = 'bold ' + (game.width * 0.12) + 'px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('PONG', game.width / 2, game.height / 2 - 50);
+    ctx.fillText('PONG', game.width / 2, game.height / 2 - game.height * 0.1);
 
-    ctx.font = '20px Arial';
-    ctx.fillText('Press SPACE to start', game.width / 2, game.height / 2 + 40);
+    ctx.font = (game.width * 0.04) + 'px Arial';
+    const startText = isMobile ? 'Tap to start' : 'Press SPACE to start';
+    ctx.fillText(startText, game.width / 2, game.height / 2 + game.height * 0.1);
 }
 
 draw();
